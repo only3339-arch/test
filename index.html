@@ -284,9 +284,11 @@
         nextButton.addEventListener('click', nextQuestion);
         restartButton.addEventListener('click', initializeQuiz);
 
-        // 初始化應用
-        window.onload = initializeQuiz;
+        // 初始化應用 (直接調用，因為腳本在 body 結尾，確保 DOM 已載入)
+        initializeQuiz();
 
     </script>
 </body>
 </html>
+
+
