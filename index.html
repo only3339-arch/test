@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>內在人格原型測驗</title>
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 設置 Inter 字體和背景顏色 */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb; /* 淺灰色背景 */
+        }
+        /* 自定義按鈕樣式，確保觸摸友好和視覺效果 */
+        .option-button {
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+        }
+        .option-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(110, 231, 183, 0.5), 0 4px 6px -4px rgba(110, 231, 183, 0.5);
+        }
+        .option-button.selected {
+            border-color: #059669; /* 綠色邊框 */
+            background-color: #d1fae5; /* 淺綠色背景 */
+            transform: scale(1.02);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-green': '#10b981',
+                        'secondary-blue': '#3b82f6',
+                        'bg-light': '#f7f9fb',
+                        'card-bg': '#ffffff'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- 主測驗容器 -->
+    <div id="quiz-container" class="w-full max-w-lg bg-card-bg p-8 md:p-10 rounded-xl shadow-2xl transition-all duration-300">
+        
+        <!-- 標題和進度條 -->
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-extrabold text-gray-800 mb-2">
+                內在人格原型測驗
+            </h1>
+            <p class="text-gray-500">探索驅動你的核心特質</p>
+            <div id="progress-bar-container" class="mt-4 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div id="progress-bar" class="h-full bg-primary-green transition-all duration-500" style="width: 0%;"></div>
+            </div>
+        </header>
+
+        <!-- 問題區域 -->
+        <div id="question-area" class="min-h-64 flex flex-col justify-between">
+            <!-- 這裡會動態載入問題 -->
+            <p id="question-text" class="text-xl font-semibold text-gray-700 mb-6 text-center"></p>
+            <div id="options-container" class="space-y-4">
+                <!-- 這裡會動態載入選項 -->
+            </div>
+        </div>
+
+        <!-- 按鈕區域 -->
+        <div class="mt-8 flex justify-end">
+            <button id="next-button" 
+                    class="px-6 py-3 bg-secondary-blue text-white font-bold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors duration-200 shadow-md">
+                下一題
+            </button>
+        </div>
+    </div>
+
+    <!-- 結果顯示區域 (初始隱藏) -->
+    <div id="result-container" class="hidden w-full max-w-lg bg-card-bg p-8 md:p-10 rounded-xl shadow-2xl mt-8">
+        <h2 class="text-3xl font-bold text-center text-primary-green mb-4">測驗結果</h2>
+        <h3 id="result-title" class="text-2xl font-extrabold text-gray-800 text-center mb-4"></h3>
+        <p id="result-description" class="text-gray-600 leading-relaxed mb-6"></p>
+        <div class="flex justify-center">
+            <button id="restart-button" 
+                    class="px-6 py-3 bg-primary-green text-white font-bold rounded-lg hover:bg-green-600 transition-colors duration-200 shadow-md">
+                重新開始測驗
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 全局變數
+        const quizContainer = document.getElementById('quiz-container');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const nextButton = document.getElementById('next-button');
+        const progressBar = document.getElementById('progress-bar');
+        const resultContainer = document.getElementById('result-container');
+        const resultTitle = document.getElementById('result-title');
+        const resultDescription = document.getElementById('result-description');
+        const restartButton = document.getElementById('restart-button');
+
+        let currentQuestionIndex = 0;
+        let score = { A: 0, B: 0, C: 0 }; // A: 探險家, B: 守護者, C: 創新者
+
+        // 測驗數據結構
+        const questions = [
+            {
+                text: "Q1: 面對一個新的挑戰或機會時，你的第一反應是？",
+                options: [
+                    { text: "A. 感到興奮，迫不及待地想親身體驗和嘗試。", scoreKey: 'A' },
+                    { text: "B. 仔細評估風險，尋求可靠的資訊或既有規範。", scoreKey: 'B' },
+                    { text: "C. 分析問題的本質，思考是否能用更有效率的方式完成。", scoreKey: 'C' }
+                ]
+            },
+            {
+                text: "Q2: 閒暇時，你最喜歡做什麼？",
+                options: [
+                    { text: "A. 戶外活動、即興旅行或參與任何能帶來新鮮刺激的事物。", scoreKey: 'A' },
+                    { text: "B. 與家人朋友共度時光，在熟悉、舒適的環境中放鬆。", scoreKey: 'B' },
+                    { text: "C. 閱讀、學習一項新技能，或專注於一個個人研究項目。", scoreKey: 'C' }
+                ]
+            },
+            {
+                text: "Q3: 你的朋友通常會如何形容你？",
+                options: [
+                    { text: "A. 活潑、無拘無束、充滿熱情和好奇心。", scoreKey: 'A' },
+                    { text: "B. 可靠、有責任感、重視承諾和穩定。", scoreKey: 'B' },
+                    { text: "C. 有創意、思想深刻、喜歡質疑現狀。", scoreKey: 'C' }
+                ]
+            },
+            {
+                text: "Q4: 對於一個重要的決定，你更依賴？",
+                options: [
+                    { text: "A. 你的直覺和當下的感覺，相信身體的反應。", scoreKey: 'A' },
+                    { text: "B. 過去的成功經驗和既定的社會價值觀。", scoreKey: 'B' },
+                    { text: "C. 理性分析、邏輯推理和數據支持。", scoreKey: 'C' }
+                ]
+            },
+            {
+                text: "Q5: 你認為人生的主要目標是？",
+                options: [
+                    { text: "A. 體驗生活的全部可能性，並隨時準備好改變方向。", scoreKey: 'A' },
+                    { text: "B. 確保自己和所愛的人擁有安全、穩定和和諧的生活。", scoreKey: 'B' },
+                    { text: "C. 創造一些有意義或改變世界的事物，留下影響。", scoreKey: 'C' }
+                ]
+            }
+        ];
+
+        // 測驗結果定義
+        const results = {
+            A: {
+                title: "🌳 探險家 (The Explorer)",
+                description: "你的內在核心是**自由與體驗**。你充滿好奇心，渴望探索未知，不喜歡被規則束縛。你活在當下，享受即興的樂趣，並相信生活最大的價值在於不斷的變動和個人的成長。你可能是團隊中的創新者和氣氛帶動者。"
+            },
+            B: {
+                title: "🛡️ 守護者 (The Guardian)",
+                description: "你的內在核心是**穩定與責任**。你忠誠、可靠、腳踏實地，重視秩序和傳統。你總是為家人、朋友或社群提供堅實的後盾，你的行為準則基於實用性和對他人的關懷。你可能是團隊中不可或缺的基石和支持者。"
+            },
+            C: {
+                title: "💡 創新者 (The Innovator)",
+                description: "你的內在核心是**知識與變革**。你是一個思想深刻的分析家，熱衷於解構事物並重塑它們。你不僅追求知識，更追求智慧，總是在尋找新的視角和更優雅的解決方案。你可能是團隊中的策略家和遠見者。"
+            }
+        };
+
+        let selectedOption = null;
+
+        /**
+         * 顯示當前問題及其選項。
+         */
+        function showQuestion() {
+            const q = questions[currentQuestionIndex];
+            questionText.textContent = q.text;
+            optionsContainer.innerHTML = ''; // 清空選項
+            selectedOption = null;
+            nextButton.disabled = true;
+
+            q.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.textContent = option.text;
+                button.className = `option-button w-full text-left p-4 rounded-lg border-2 border-gray-300 text-gray-700 bg-card-bg hover:bg-gray-50 focus:outline-none transition-all duration-200`;
+                button.setAttribute('data-score-key', option.scoreKey);
+                button.addEventListener('click', () => selectOption(button, option.scoreKey));
+                optionsContainer.appendChild(button);
+            });
+            updateProgressBar();
+        }
+
+        /**
+         * 處理選項點擊事件。
+         */
+        function selectOption(button, scoreKey) {
+            // 移除所有按鈕的選中狀態
+            document.querySelectorAll('.option-button').forEach(btn => {
+                btn.classList.remove('selected');
+                btn.classList.remove('border-primary-green');
+            });
+
+            // 添加當前按鈕的選中狀態
+            button.classList.add('selected');
+            button.classList.add('border-primary-green');
+            
+            selectedOption = scoreKey;
+            nextButton.disabled = false;
+        }
+
+        /**
+         * 處理「下一題」按鈕點擊事件。
+         */
+        function nextQuestion() {
+            if (!selectedOption) {
+                // 實際應用中不使用 alert()，但因為按鈕已被禁用，這裡作為安全檢查
+                console.error('請選擇一個選項。');
+                return;
+            }
+
+            // 累計分數
+            score[selectedOption]++;
+
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                showQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        /**
+         * 計算並顯示最終結果。
+         */
+        function showResult() {
+            quizContainer.classList.add('hidden');
+            resultContainer.classList.remove('hidden');
+
+            // 找出得分最高的類型
+            let maxScore = -1;
+            let resultKey = '';
+            
+            // 處理平分情況：如果平分，優先順序 A > C > B (任意設定)
+            const orderedKeys = ['A', 'C', 'B']; 
+
+            orderedKeys.forEach(key => {
+                if (score[key] > maxScore) {
+                    maxScore = score[key];
+                    resultKey = key;
+                }
+            });
+
+            // 如果有平分但不是我們設定的優先級，可以選擇第一個，但上面的邏輯已處理平分
+            if (!resultKey) {
+                 resultKey = 'A'; 
+            }
+
+            const result = results[resultKey];
+            resultTitle.textContent = result.title;
+            resultDescription.innerHTML = result.description;
+        }
+
+        /**
+         * 更新進度條。
+         */
+        function updateProgressBar() {
+            const progress = (currentQuestionIndex / questions.length) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+        
+        /**
+         * 初始化或重新開始測驗。
+         */
+        function initializeQuiz() {
+            currentQuestionIndex = 0;
+            score = { A: 0, B: 0, C: 0 };
+            selectedOption = null;
+
+            quizContainer.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+            nextButton.textContent = "下一題";
+
+            showQuestion();
+        }
+
+        // 事件監聽器
+        nextButton.addEventListener('click', nextQuestion);
+        restartButton.addEventListener('click', initializeQuiz);
+
+        // 初始化應用
+        window.onload = initializeQuiz;
+
+    </script>
+</body>
+</html>
